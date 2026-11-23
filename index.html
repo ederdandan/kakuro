@@ -1,0 +1,1655 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#14110f" />
+<title>Ábaco Zen — Somas Cruzadas (Kakuro PWA)</title>
+<style>
+  :root {
+    --bg: #14110f;
+    --bg-elev: #1f1a16;
+    --bg-card: #28221d;
+    --ink: #f7f1e3;
+    --muted: #b7aa96;
+    --accent: #eab308;
+    --accent-ink: #181308;
+    --border: rgba(247, 241, 227, 0.14);
+    --cell-bg: #fbf6ea;
+    --cell-ink: #1a1612;
+    --block-bg: #2c241e;
+    --clue-ink: #f5e9cf;
+    --ok: #16a34a;
+    --err: #dc2626;
+    --note-ink: #57534e;
+    --grid-line: #8c7a62;
+    --radius: 14px;
+  }
+
+  body[data-theme="origami"] {
+    --bg: #eef3f8;
+    --bg-elev: #ffffff;
+    --bg-card: #f8fafc;
+    --ink: #0f172a;
+    --muted: #475569;
+    --accent: #2563eb;
+    --accent-ink: #ffffff;
+    --border: rgba(15, 23, 42, 0.14);
+    --cell-bg: #ffffff;
+    --cell-ink: #0f172a;
+    --block-bg: #1e3a8a;
+    --clue-ink: #eff6ff;
+    --ok: #059669;
+    --err: #e11d48;
+    --note-ink: #64748b;
+    --grid-line: #3b82f6;
+  }
+
+  body[data-theme="relojoaria"] {
+    --bg: #161210;
+    --bg-elev: #221b17;
+    --bg-card: #2d231d;
+    --ink: #ffedd5;
+    --muted: #cba987;
+    --accent: #ea580c;
+    --accent-ink: #fff7ed;
+    --border: rgba(255, 237, 213, 0.15);
+    --cell-bg: #3b2d24;
+    --cell-ink: #fed7aa;
+    --block-bg: #1a130f;
+    --clue-ink: #fdba74;
+    --ok: #22c55e;
+    --err: #ef4444;
+    --note-ink: #d6b89a;
+    --grid-line: #b45309;
+  }
+
+  body[data-theme="bambu"] {
+    --bg: #121c17;
+    --bg-elev: #1a2820;
+    --bg-card: #22342a;
+    --ink: #ecfdf5;
+    --muted: #a7c4b5;
+    --accent: #10b981;
+    --accent-ink: #052e16;
+    --border: rgba(236, 253, 245, 0.14);
+    --cell-bg: #f0fdf4;
+    --cell-ink: #064e3b;
+    --block-bg: #14532d;
+    --clue-ink: #dcfce7;
+    --ok: #16a34a;
+    --err: #dc2626;
+    --note-ink: #4b7c65;
+    --grid-line: #34d399;
+  }
+
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    overscroll-behavior: none;
+  }
+
+  button {
+    font: inherit;
+    color: inherit;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;
+  }
+
+  button:active {
+    transform: scale(0.96);
+  }
+
+  button.primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: transparent;
+    font-weight: 700;
+  }
+
+  button.active-pill {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: transparent;
+    font-weight: 700;
+  }
+
+  .app {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 12px 14px 88px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    flex-wrap: wrap;
+  }
+
+  .profile-chip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+  }
+
+  .avatar-box {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+    background: var(--bg-card);
+    border: 2px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .avatar-box.gold-frame {
+    border: 3px solid #facc15;
+    box-shadow: 0 0 12px rgba(250, 204, 21, 0.55);
+  }
+
+  .avatar-box img, .avatar-box svg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .stats-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .controls-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 10px;
+  }
+
+  .seg-group {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+  }
+
+  .combo-banner {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 12px;
+    padding: 9px 12px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .combo-chips {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .combo-chip {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 3px 8px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .board-wrap {
+    position: relative;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    touch-action: none;
+  }
+
+  .kakuro-grid {
+    display: grid;
+    gap: 2px;
+    background: var(--grid-line);
+    border: 2px solid var(--grid-line);
+    border-radius: 8px;
+    width: 100%;
+    max-width: 520px;
+    aspect-ratio: 1 / 1;
+  }
+
+  .cell {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .cell.block {
+    background: var(--block-bg);
+  }
+
+  .cell.clue-cell svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .clue-solved {
+    stroke: var(--ok) !important;
+    stroke-width: 2.4 !important;
+  }
+
+  .cell.play-cell {
+    background: var(--cell-bg);
+    color: var(--cell-ink);
+    cursor: pointer;
+    font-weight: 800;
+  }
+
+  .cell.play-cell.selected {
+    outline: 3px solid var(--accent);
+    outline-offset: -3px;
+    z-index: 2;
+  }
+
+  .cell.play-cell.peer {
+    filter: brightness(0.94);
+  }
+
+  .cell.play-cell.err {
+    background: color-mix(in srgb, var(--err) 22%, var(--cell-bg));
+    color: var(--err);
+  }
+
+  .cell.play-cell.ok-line {
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--ok) 55%, transparent);
+  }
+
+  .notes-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    width: 100%;
+    height: 100%;
+    padding: 1px;
+    font-size: 9px;
+    line-height: 1;
+    color: var(--note-ink);
+    font-weight: 600;
+  }
+
+  .notes-grid span {
+    display: grid;
+    place-items: center;
+  }
+
+  .pasted-sticker {
+    position: absolute;
+    font-size: 22px;
+    pointer-events: auto;
+    cursor: pointer;
+    filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.35));
+    transform: translate(-50%, -50%) rotate(-8deg);
+    z-index: 6;
+    animation: popIn 0.25s ease-out;
+  }
+
+  .power-bar {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .power-btn {
+    flex: 1 1 auto;
+    font-size: 12px;
+    padding: 7px 9px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+  }
+
+  .keypad {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 7px;
+  }
+
+  .key-btn {
+    padding: 11px 6px;
+    font-size: 18px;
+    font-weight: 800;
+    background: var(--bg-card);
+  }
+
+  .key-btn.action-key {
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .key-btn.mode-on {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: transparent;
+  }
+
+  .floating-sticker-btn {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 40;
+    border-radius: 999px;
+    padding: 11px 16px;
+    font-weight: 800;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+
+  .sticker-drawer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--bg-elev);
+    border-top: 2px solid var(--accent);
+    border-radius: 18px 18px 0 0;
+    padding: 14px 16px 24px;
+    z-index: 45;
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.45);
+    display: none;
+  }
+
+  .sticker-drawer.open {
+    display: block;
+  }
+
+  .sticker-list {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 8px 2px;
+  }
+
+  .sticker-item {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    cursor: grab;
+    touch-action: none;
+  }
+
+  .sticker-item .emo {
+    font-size: 26px;
+  }
+
+  .sticker-item .lbl {
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .flying-sticker {
+    position: fixed;
+    pointer-events: none;
+    z-index: 999;
+    font-size: 36px;
+    transform: translate(-50%, -50%) scale(1.2);
+    filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.4));
+  }
+
+  .burst-sticker {
+    position: fixed;
+    left: 50%;
+    top: 38%;
+    transform: translate(-50%, -50%) scale(0.4);
+    z-index: 80;
+    pointer-events: none;
+    background: var(--bg-elev);
+    border: 2px solid var(--accent);
+    border-radius: 16px;
+    padding: 10px 18px;
+    font-size: 18px;
+    font-weight: 800;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+    animation: burstAnim 1.15s cubic-bezier(0.2, 0.9, 0.3, 1.1) forwards;
+  }
+
+  @keyframes burstAnim {
+    0% { opacity: 0; transform: translate(-50%, -30%) scale(0.4) rotate(-8deg); }
+    25% { opacity: 1; transform: translate(-50%, -52%) scale(1.12) rotate(3deg); }
+    75% { opacity: 1; transform: translate(-50%, -62%) scale(1) rotate(-2deg); }
+    100% { opacity: 0; transform: translate(-50%, -82%) scale(0.9) rotate(0deg); }
+  }
+
+  @keyframes popIn {
+    0% { transform: translate(-50%, -50%) scale(0.3); }
+    100% { transform: translate(-50%, -50%) scale(1) rotate(-8deg); }
+  }
+
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.72);
+    z-index: 60;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+  }
+
+  .modal-backdrop.open {
+    display: flex;
+  }
+
+  .modal-card {
+    width: 100%;
+    max-width: 540px;
+    max-height: 88vh;
+    overflow-y: auto;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .avatar-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .avatar-choice {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px;
+    border-radius: 12px;
+    border: 2px solid var(--border);
+    background: var(--bg-card);
+  }
+
+  .avatar-choice.picked {
+    border-color: var(--accent);
+  }
+
+  .avatar-choice.locked {
+    opacity: 0.55;
+  }
+
+  .shop-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 10px;
+  }
+
+  .shop-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  input[type="text"] {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--ink);
+    font: inherit;
+  }
+
+  video, canvas.crop-canvas {
+    width: 100%;
+    max-width: 260px;
+    aspect-ratio: 1 / 1;
+    border-radius: 14px;
+    background: #000;
+    object-fit: cover;
+    margin: 0 auto;
+    display: block;
+  }
+</style>
+</head>
+<body data-theme="kintsugi">
+<div class="app">
+  <header class="topbar">
+    <div class="profile-chip" id="openProfileBtn" title="Editar perfil">
+      <div class="avatar-box" id="topAvatar"></div>
+      <div>
+        <div id="topName" style="font-weight:800;font-size:15px;">Mestre Zen</div>
+        <div id="topSub" style="font-size:12px;color:var(--muted);">Streak: 0 🔥</div>
+      </div>
+    </div>
+    <div class="stats-row">
+      <span class="badge" id="coinBadge">🪙 120</span>
+      <span class="badge" id="timerBadge">⏱️ 00:00</span>
+      <button id="openShopBtn">🏪 Loja</button>
+      <button id="soundToggleBtn" title="Som">🔊</button>
+    </div>
+  </header>
+
+  <section class="controls-bar">
+    <div class="seg-group" id="diffGroup">
+      <button data-diff="facil" class="active-pill">Fácil (6×6)</button>
+      <button data-diff="medio">Médio (8×8)</button>
+      <button data-diff="dificil">Difícil (10×10)</button>
+      <button data-diff="diario">📅 Diário (2×🪙)</button>
+    </div>
+    <div class="seg-group">
+      <select id="themeSelect" aria-label="Tema visual" style="padding:7px 10px;border-radius:10px;background:var(--bg-card);color:var(--ink);border:1px solid var(--border);">
+        <option value="kintsugi">🏺 Kintsugi Imperial</option>
+        <option value="origami">🦢 Origami Celeste</option>
+        <option value="relojoaria">⚙️ Relojoaria Cobre</option>
+        <option value="bambu">🎋 Jardim de Bambu</option>
+      </select>
+      <button id="newPuzzleBtn">🔄 Novo</button>
+    </div>
+  </section>
+
+  <section class="combo-banner" id="comboBanner">
+    <div>
+      <strong id="comboTitle">Calculadora Combinatória:</strong>
+      <span id="comboDesc" style="color:var(--muted);">Toque em uma casa branca para ver as somas possíveis sem repetir dígitos.</span>
+    </div>
+    <div class="combo-chips" id="comboChips"></div>
+  </section>
+
+  <section class="board-wrap" id="boardWrap">
+    <div class="kakuro-grid" id="kakuroGrid"></div>
+  </section>
+
+  <section class="power-bar">
+    <button class="power-btn" id="hintBtn">💡 Dica (<span id="hintCount">0</span> / 15🪙)</button>
+    <button class="power-btn" id="autoNotesBtn">⚡ Auto-Notas (<span id="notesCount">0</span> / 20🪙)</button>
+    <button class="power-btn" id="clearErrBtn">🧹 Limpar Erros (<span id="errCount">0</span> / 10🪙)</button>
+    <button class="power-btn" id="undoBtn">↩️ Desfazer</button>
+  </section>
+
+  <section class="keypad" id="keypad"></section>
+</div>
+
+<button class="floating-sticker-btn primary" id="toggleStickerDrawerBtn">🎭 Stickers</button>
+
+<div class="sticker-drawer" id="stickerDrawer">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+    <strong style="font-size:14px;">Stickers — Toque para reagir ou arraste para o tabuleiro</strong>
+    <button id="closeStickerDrawerBtn" style="padding:4px 10px;">✕</button>
+  </div>
+  <div class="sticker-list" id="stickerList"></div>
+</div>
+
+<!-- Modal Perfil / Onboarding -->
+<div class="modal-backdrop" id="profileModal">
+  <div class="modal-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h2 style="margin:0;font-size:18px;">Credencial do Jogador</h2>
+      <button id="closeProfileBtn">✕</button>
+    </div>
+    <div>
+      <label style="display:block;font-size:13px;margin-bottom:5px;color:var(--muted);">Seu nome ou apelido</label>
+      <input type="text" id="profileNameInput" maxlength="24" placeholder="Ex: Mestre Zen" />
+    </div>
+    <div>
+      <div style="font-size:13px;margin-bottom:6px;color:var(--muted);">Escolha um emblema SVG (ou use Galeria / Câmera abaixo)</div>
+      <div class="avatar-grid" id="avatarChoiceGrid"></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <label class="badge" style="cursor:pointer;">
+        🖼️ Galeria
+        <input type="file" id="galleryInput" accept="image/*" hidden />
+      </label>
+      <button id="cameraStartBtn">📷 Câmera</button>
+      <button id="switchCamBtn" style="display:none;">🔄 Alternar Câmera</button>
+      <button id="capturePhotoBtn" class="primary" style="display:none;">📸 Capturar</button>
+    </div>
+    <video id="camVideo" autoplay playsinline style="display:none;"></video>
+    <canvas id="cropCanvas" width="160" height="160" style="display:none;"></canvas>
+    <button class="primary" id="saveProfileBtn">Salvar Credencial</button>
+  </div>
+</div>
+
+<!-- Modal Loja -->
+<div class="modal-backdrop" id="shopModal">
+  <div class="modal-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h2 style="margin:0;font-size:18px;">🏪 Loja do Ábaco (<span id="shopCoins">0</span> 🪙)</h2>
+      <button id="closeShopBtn">✕</button>
+    </div>
+    <div class="shop-grid" id="shopGrid"></div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = "abaco_zen_kakuro_v1";
+
+const AVATARS = [
+  { id: "zen1", label: "Lótus", vip: false, svg: `<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill="#1e293b"/><path d="M32 14 C24 24 24 36 32 46 C40 36 40 24 32 14 Z" fill="#f59e0b"/><path d="M16 34 C22 28 28 32 32 46 C22 44 16 40 16 34 Z" fill="#fbbf24"/><path d="M48 34 C42 28 36 32 32 46 C42 44 48 40 48 34 Z" fill="#fbbf24"/></svg>` },
+  { id: "zen2", label: "Ábaco", vip: false, svg: `<svg viewBox="0 0 64 64"><rect x="4" y="4" width="56" height="56" rx="14" fill="#312e81"/><line x1="14" y1="22" x2="50" y2="22" stroke="#a5b4fc" stroke-width="3"/><line x1="14" y1="34" x2="50" y2="34" stroke="#a5b4fc" stroke-width="3"/><line x1="14" y1="46" x2="50" y2="46" stroke="#a5b4fc" stroke-width="3"/><circle cx="24" cy="22" r="5" fill="#38bdf8"/><circle cx="38" cy="34" r="5" fill="#38bdf8"/><circle cx="28" cy="46" r="5" fill="#38bdf8"/></svg>` },
+  { id: "zen3", label: "Coruja", vip: false, svg: `<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill="#14532d"/><circle cx="24" cy="28" r="7" fill="#fef08a"/><circle cx="40" cy="28" r="7" fill="#fef08a"/><circle cx="24" cy="28" r="3" fill="#0f172a"/><circle cx="40" cy="28" r="3" fill="#0f172a"/><polygon points="32,32 28,39 36,39" fill="#fb923c"/></svg>` },
+  { id: "zen4", label: "Sol", vip: false, svg: `<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill="#7c2d12"/><circle cx="32" cy="32" r="13" fill="#facc15"/><path d="M32 6v8M32 50v8M6 32h8M50 32h8M14 14l6 6M44 44l6 6M50 14l-6 6M20 44l-6 6" stroke="#fde047" stroke-width="3" stroke-linecap="round"/></svg>` },
+  { id: "zen5", label: "Origami", vip: false, svg: `<svg viewBox="0 0 64 64"><rect x="4" y="4" width="56" height="56" rx="16" fill="#0f766e"/><polygon points="32,12 52,36 32,52 12,36" fill="#99f6e4"/><polygon points="32,12 52,36 32,36" fill="#5eead4"/></svg>` },
+  { id: "zen6", label: "Lua", vip: false, svg: `<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill="#1e1b4b"/><path d="M38 14 A18 18 0 1 0 50 44 A14 14 0 1 1 38 14 Z" fill="#fde68a"/></svg>` },
+  { id: "vip1", label: "Dragão", vip: true, svg: `<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill="#450a0a"/><path d="M16 42 Q24 16 46 20 Q38 30 48 44 Q32 38 16 42 Z" fill="#f87171"/><circle cx="38" cy="24" r="3" fill="#fef08a"/></svg>` },
+  { id: "vip2", label: "Diamante", vip: true, svg: `<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill="#082f49"/><polygon points="32,12 50,26 32,52 14,26" fill="#38bdf8"/><polygon points="32,12 42,26 32,52 22,26" fill="#bae6fd"/></svg>` },
+  { id: "vip3", label: "Coroa", vip: true, svg: `<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill="#422006"/><polygon points="14,44 18,22 28,32 32,18 36,32 46,22 50,44" fill="#facc15"/></svg>` }
+];
+
+const STICKERS = [
+  { id: "s1", emo: "🎯", label: "Exato!" },
+  { id: "s2", emo: "🔥", label: "Combo!" },
+  { id: "s3", emo: "🧠", label: "Lógica!" },
+  { id: "s4", emo: "✨", label: "Kintsugi" },
+  { id: "s5", emo: "⚡", label: "Rápido" },
+  { id: "s6", emo: "🏆", label: "Mestre" }
+];
+
+const SHOP_ITEMS = [
+  { id: "pack_hint", kind: "consumable", key: "hints", title: "💡 Dica de Casa (+3)", desc: "Preenche automaticamente o valor correto de 1 célula.", cost: 30 },
+  { id: "pack_notes", kind: "consumable", key: "autoNotes", title: "⚡ Auto-Notas (+3)", desc: "Preenche rascunhos válidos nas casas vazias.", cost: 40 },
+  { id: "pack_err", kind: "consumable", key: "clearErr", title: "🧹 Limpa Erros (+3)", desc: "Remove números duplicados ou fora da soma.", cost: 25 },
+  { id: "theme_origami", kind: "theme", value: "origami", title: "🦢 Tema Origami Celeste", desc: "Papel texturizado claro com azul-índigo.", cost: 60 },
+  { id: "theme_relojoaria", kind: "theme", value: "relojoaria", title: "⚙️ Tema Relojoaria Cobre", desc: "Engrenagens quentes e latão escuro.", cost: 80 },
+  { id: "theme_bambu", kind: "theme", value: "bambu", title: "🎋 Tema Jardim de Bambu", desc: "Tons verdes suaves para leitura zen.", cost: 80 },
+  { id: "vip_avatars", kind: "unlock", key: "vipAvatars", title: "👑 Pacote Avatares VIP", desc: "Libera Dragão, Diamante e Coroa.", cost: 90 },
+  { id: "gold_frame", kind: "unlock", key: "goldFrame", title: "✨ Moldura Dourada", desc: "Destaque dourado ao redor do seu avatar.", cost: 100 },
+  { id: "double_coins", kind: "unlock", key: "doubleCoins", title: "🪙 Amuleto 2× Moedas", desc: "Dobra as moedas ganhas ao concluir partidas.", cost: 140 }
+];
+
+function safeLoad() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return null;
+}
+
+function safeSave(data) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {}
+}
+
+const defaultState = () => ({
+  onboarded: false,
+  profile: { name: "Mestre Zen", avatarType: "svg", avatarVal: "zen1" },
+  coins: 120,
+  streak: 0,
+  sound: true,
+  theme: "kintsugi",
+  unlockedThemes: ["kintsugi"],
+  unlocks: { vipAvatars: false, goldFrame: false, doubleCoins: false },
+  inventory: { hints: 2, autoNotes: 1, clearErr: 2 }
+});
+
+let state = safeLoad() || defaultState();
+
+// Áudio procedural leve (Web Audio API)
+let audioCtx = null;
+function playTone(type) {
+  if (!state.sound) return;
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    if (type === "tap") {
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(520, now);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+      osc.start(now); osc.stop(now + 0.06);
+    } else if (type === "combo") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(587.33, now);
+      osc.frequency.setValueAtTime(880, now + 0.08);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      osc.start(now); osc.stop(now + 0.25);
+    } else if (type === "err") {
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(190, now);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+      osc.start(now); osc.stop(now + 0.14);
+    } else if (type === "win") {
+      osc.type = "triangle";
+      [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
+        osc.frequency.setValueAtTime(freq, now + idx * 0.09);
+      });
+      gain.gain.setValueAtTime(0.14, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+      osc.start(now); osc.stop(now + 0.5);
+    }
+  } catch (e) {}
+}
+
+// PRNG determinístico por semente
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function() {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function getDailySeed() {
+  const d = new Date();
+  return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+}
+
+// Gerador de tabuleiro Kakuro válido
+function generateKakuro(mode, seed) {
+  const rng = mulberry32(seed);
+  const size = mode === "facil" ? 6 : mode === "medio" ? 8 : mode === "diario" ? 8 : 10;
+  const grid = Array.from({ length: size }, (_, r) =>
+    Array.from({ length: size }, (_, c) => ({
+      r, c,
+      type: (r === 0 || c === 0) ? "clue" : "play",
+      solution: 0,
+      val: 0,
+      notes: [],
+      acrossSum: null,
+      downSum: null
+    }))
+  );
+
+  // Define blocos escuros internos e runs horizontais/verticais
+  const isBlock = Array.from({ length: size }, (_, r) =>
+    Array.from({ length: size }, (_, c) => {
+      if (r === 0 && c === 0) return true;
+      if (r === 0 || c === 0) return false;
+      if (size === 6) return (r === 2 && c === 3) || (r === 4 && c === 2) || (r === 3 && c === 5);
+      if (size === 8) return ((r + c) % 4 === 0 && r > 1 && c > 1) || (r === 3 && c === 6) || (r === 6 && c === 3);
+      return ((r * 3 + c) % 5 === 0 && r > 1 && c > 1) || (r === 5 && c === 5);
+    })
+  );
+
+  // Preenche dígitos sem repetição em cada run horizontal
+  for (let r = 1; r < size; r++) {
+    let c = 1;
+    while (c < size) {
+      if (isBlock[r][c]) { c++; continue; }
+      const start = c;
+      while (c < size && !isBlock[r][c]) c++;
+      const len = c - start;
+      if (len >= 2) {
+        const pool = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+        for (let i = pool.length - 1; i > 0; i--) {
+          const j = Math.floor(rng() * (i + 1));
+          [pool[i], pool[j]] = [pool[j], pool[i]];
+        }
+        const chosen = pool.slice(0, Math.min(len, 7));
+        let sum = 0;
+        for (let k = 0; k < len; k++) {
+          const digit = chosen[k % chosen.length] || (k + 1);
+          grid[r][start + k].solution = digit;
+          sum += digit;
+        }
+        grid[r][start - 1].acrossSum = sum;
+        grid[r][start - 1].type = "clue";
+      } else {
+        grid[r][start].type = "block";
+      }
+    }
+  }
+
+  // Calcula somas verticais garantindo sem repetição
+  for (let c = 1; c < size; c++) {
+    let r = 1;
+    while (r < size) {
+      if (grid[r][c].type === "block") { r++; continue; }
+      const start = r;
+      while (r < size && grid[r][c].type === "play") r++;
+      const len = r - start;
+      if (len >= 2) {
+        const used = new Set();
+        let sum = 0;
+        for (let k = 0; k < len; k++) {
+          let d = grid[start + k][c].solution || 1;
+          while (used.has(d) || d > 9) {
+            d = (d % 9) + 1;
+          }
+          used.add(d);
+          grid[start + k][c].solution = d;
+          sum += d;
+        }
+        grid[start - 1][c].downSum = sum;
+        grid[start - 1][c].type = "clue";
+      } else {
+        grid[start][c].type = "block";
+      }
+    }
+  }
+
+  // Recalcula somas horizontais finais após ajustes verticais
+  for (let r = 1; r < size; r++) {
+    let c = 1;
+    while (c < size) {
+      if (grid[r][c].type !== "play") { c++; continue; }
+      const start = c;
+      while (c < size && grid[r][c].type === "play") c++;
+      const len = c - start;
+      if (len >= 2) {
+        let sum = 0;
+        for (let k = 0; k < len; k++) sum += grid[r][start + k].solution;
+        grid[r][start - 1].acrossSum = sum;
+        grid[r][start - 1].type = "clue";
+      }
+    }
+  }
+
+  // Extrai runs
+  const runs = [];
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      const cell = grid[r][c];
+      if (cell.type === "clue" && cell.acrossSum) {
+        const cells = [];
+        let cc = c + 1;
+        while (cc < size && grid[r][cc].type === "play") {
+          cells.push(grid[r][cc]);
+          cc++;
+        }
+        if (cells.length >= 2) {
+          runs.push({ dir: "across", clueR: r, clueC: c, target: cell.acrossSum, cells });
+        } else {
+          cell.acrossSum = null;
+        }
+      }
+      if (cell.type === "clue" && cell.downSum) {
+        const cells = [];
+        let rr = r + 1;
+        while (rr < size && grid[rr][c].type === "play") {
+          cells.push(grid[rr][c]);
+          rr++;
+        }
+        if (cells.length >= 2) {
+          runs.push({ dir: "down", clueR: r, clueC: c, target: cell.downSum, cells });
+        } else {
+          cell.downSum = null;
+        }
+      }
+      if (cell.type === "clue" && !cell.acrossSum && !cell.downSum) {
+        cell.type = "block";
+      }
+    }
+  }
+
+  return { mode, size, grid, runs, pastedStickers: [] };
+}
+
+function getCombinations(target, count) {
+  const results = [];
+  function backtrack(start, k, sum, path) {
+    if (k === 0) {
+      if (sum === target) results.push([...path]);
+      return;
+    }
+    for (let n = start; n <= 9; n++) {
+      if (sum + n > target) break;
+      path.push(n);
+      backtrack(n + 1, k - 1, sum + n, path);
+      path.pop();
+    }
+  }
+  backtrack(1, count, 0, []);
+  return results;
+}
+
+let currentMode = "facil";
+let puzzle = null;
+let selectedPos = null;
+let noteMode = false;
+let historyStack = [];
+let elapsedSec = 0;
+let solvedRunsSet = new Set();
+let gameWon = false;
+
+function startPuzzle(mode) {
+  currentMode = mode;
+  document.querySelectorAll("#diffGroup button").forEach(btn => {
+    btn.classList.toggle("active-pill", btn.dataset.diff === mode);
+  });
+  const seed = mode === "diario" ? getDailySeed() : Math.floor(Math.random() * 900000) + 100000;
+  puzzle = generateKakuro(mode, seed);
+  selectedPos = null;
+  noteMode = false;
+  historyStack = [];
+  elapsedSec = 0;
+  solvedRunsSet = new Set();
+  gameWon = false;
+
+  // Pré-preenche 1 casa no fácil para ritmo ágil
+  if (mode === "facil") {
+    const firstPlay = puzzle.runs[0]?.cells[0];
+    if (firstPlay) firstPlay.val = firstPlay.solution;
+  }
+
+  renderAll();
+}
+
+function pushHistory() {
+  const snap = puzzle.grid.map(row => row.map(c => ({ val: c.val, notes: [...c.notes] })));
+  historyStack.push(snap);
+  if (historyStack.length > 40) historyStack.shift();
+}
+
+function undoMove() {
+  if (!historyStack.length || gameWon) return;
+  const snap = historyStack.pop();
+  for (let r = 0; r < puzzle.size; r++) {
+    for (let c = 0; c < puzzle.size; c++) {
+      puzzle.grid[r][c].val = snap[r][c].val;
+      puzzle.grid[r][c].notes = snap[r][c].notes;
+    }
+  }
+  playTone("tap");
+  renderAll();
+}
+
+function getCellRuns(r, c) {
+  return puzzle.runs.filter(run => run.cells.some(item => item.r === r && item.c === c));
+}
+
+function evaluateBoard() {
+  const errCells = new Set();
+  const okCells = new Set();
+  const newlySolvedRuns = [];
+
+  for (const run of puzzle.runs) {
+    const vals = run.cells.map(c => c.val).filter(v => v > 0);
+    const seen = new Set();
+    let hasDup = false;
+    let sum = 0;
+    for (const v of vals) {
+      if (seen.has(v)) hasDup = true;
+      seen.add(v);
+      sum += v;
+    }
+    const isFull = run.cells.every(c => c.val > 0);
+    const isExact = isFull && !hasDup && sum === run.target;
+
+    if (hasDup || sum > run.target || (isFull && sum !== run.target)) {
+      run.cells.forEach(c => { if (c.val > 0) errCells.add(`${c.r},${c.c}`); });
+    }
+    if (isExact) {
+      const key = `${run.dir}:${run.clueR},${run.clueC}`;
+      if (!solvedRunsSet.has(key)) {
+        solvedRunsSet.add(key);
+        newlySolvedRuns.push(run);
+      }
+      run.cells.forEach(c => okCells.add(`${c.r},${c.c}`));
+    }
+  }
+
+  if (newlySolvedRuns.length > 0 && !gameWon) {
+    playTone("combo");
+    const st = STICKERS[Math.floor(Math.random() * STICKERS.length)];
+    triggerBurst(`${st.emo} Soma Exata! ${st.label}`);
+  }
+
+  const allPlayCells = [];
+  for (let r = 0; r < puzzle.size; r++) {
+    for (let c = 0; c < puzzle.size; c++) {
+      if (puzzle.grid[r][c].type === "play") allPlayCells.push(puzzle.grid[r][c]);
+    }
+  }
+
+  const completeAndClean = allPlayCells.every(c => c.val > 0) && errCells.size === 0 &&
+    puzzle.runs.every(run => run.cells.reduce((acc, c) => acc + c.val, 0) === run.target);
+
+  if (completeAndClean && !gameWon) {
+    gameWon = true;
+    playTone("win");
+    state.streak += 1;
+    const baseReward = currentMode === "facil" ? 25 : currentMode === "medio" ? 45 : currentMode === "dificil" ? 75 : 60;
+    const mult = (currentMode === "diario" ? 2 : 1) * (state.unlocks.doubleCoins ? 2 : 1);
+    const earned = baseReward * mult;
+    state.coins += earned;
+    safeSave(state);
+    triggerBurst(`🏆 Resolvido! +${earned} 🪙`);
+  }
+
+  return { errCells, okCells };
+}
+
+function triggerBurst(text) {
+  const el = document.createElement("div");
+  el.className = "burst-sticker";
+  el.textContent = text;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1200);
+}
+
+function setDigit(digit) {
+  if (!selectedPos || gameWon) return;
+  const cell = puzzle.grid[selectedPos.r][selectedPos.c];
+  if (!cell || cell.type !== "play") return;
+
+  pushHistory();
+  if (digit === 0) {
+    cell.val = 0;
+    cell.notes = [];
+    playTone("tap");
+  } else if (noteMode) {
+    cell.val = 0;
+    const idx = cell.notes.indexOf(digit);
+    if (idx >= 0) cell.notes.splice(idx, 1);
+    else {
+      cell.notes.push(digit);
+      cell.notes.sort((a, b) => a - b);
+    }
+    playTone("tap");
+  } else {
+    cell.notes = [];
+    cell.val = cell.val === digit ? 0 : digit;
+    playTone(cell.val ? "tap" : "tap");
+  }
+  renderAll();
+}
+
+function updateComboBanner() {
+  const titleEl = document.getElementById("comboTitle");
+  const descEl = document.getElementById("comboDesc");
+  const chipsEl = document.getElementById("comboChips");
+  chipsEl.innerHTML = "";
+
+  if (!selectedPos) {
+    titleEl.textContent = "Calculadora Combinatória:";
+    descEl.textContent = "Toque em uma casa branca para ver as combinações possíveis sem repetir dígitos.";
+    return;
+  }
+  const cell = puzzle.grid[selectedPos.r][selectedPos.c];
+  if (!cell || cell.type !== "play") return;
+
+  const runs = getCellRuns(cell.r, cell.c);
+  titleEl.textContent = `Casa (${cell.r},${cell.c}) — Combinações:`;
+  descEl.textContent = "";
+
+  runs.forEach(run => {
+    const combos = getCombinations(run.target, run.cells.length);
+    const chip = document.createElement("div");
+    chip.className = "combo-chip";
+    const dirLabel = run.dir === "across" ? "→" : "↓";
+    const fmt = combos.length ? combos.map(arr => arr.join("+")).join(" | ") : "—";
+    chip.textContent = `${dirLabel} ${run.target} (${run.cells.length}c): ${fmt}`;
+    chipsEl.appendChild(chip);
+  });
+}
+
+function renderGrid() {
+  const gridEl = document.getElementById("kakuroGrid");
+  gridEl.innerHTML = "";
+  gridEl.style.gridTemplateColumns = `repeat(${puzzle.size}, 1fr)`;
+
+  const { errCells, okCells } = evaluateBoard();
+  const peerSet = new Set();
+  if (selectedPos) {
+    getCellRuns(selectedPos.r, selectedPos.c).forEach(r =>
+      r.cells.forEach(c => peerSet.add(`${c.r},${c.c}`))
+    );
+  }
+
+  for (let r = 0; r < puzzle.size; r++) {
+    for (let c = 0; c < puzzle.size; c++) {
+      const cell = puzzle.grid[r][c];
+      const div = document.createElement("div");
+      div.className = "cell";
+      div.dataset.r = r;
+      div.dataset.c = c;
+
+      if (cell.type === "block") {
+        div.classList.add("block");
+      } else if (cell.type === "clue") {
+        div.classList.add("clue-cell");
+        const acrossSolved = cell.acrossSum ? solvedRunsSet.has(`across:${r},${c}`) : false;
+        const downSolved = cell.downSum ? solvedRunsSet.has(`down:${r},${c}`) : false;
+        div.innerHTML = `
+          <svg viewBox="0 0 100 100">
+            <rect x="0" y="0" width="100" height="100" fill="var(--block-bg)" />
+            <line x1="0" y1="0" x2="100" y2="100" stroke="var(--grid-line)" stroke-width="2" />
+            ${cell.downSum ? `<text x="22" y="76" font-size="26" font-weight="800" fill="${downSolved ? "var(--ok)" : "var(--clue-ink)"}" text-anchor="middle">${cell.downSum}</text>` : ""}
+            ${cell.acrossSum ? `<text x="74" y="34" font-size="26" font-weight="800" fill="${acrossSolved ? "var(--ok)" : "var(--clue-ink)"}" text-anchor="middle">${cell.acrossSum}</text>` : ""}
+          </svg>
+        `;
+      } else {
+        div.classList.add("play-cell");
+        const key = `${r},${c}`;
+        if (selectedPos && selectedPos.r === r && selectedPos.c === c) div.classList.add("selected");
+        else if (peerSet.has(key)) div.classList.add("peer");
+        if (errCells.has(key)) div.classList.add("err");
+        if (okCells.has(key)) div.classList.add("ok-line");
+
+        if (cell.val > 0) {
+          div.textContent = cell.val;
+          div.style.fontSize = puzzle.size >= 10 ? "15px" : "19px";
+        } else if (cell.notes.length > 0) {
+          const ng = document.createElement("div");
+          ng.className = "notes-grid";
+          for (let n = 1; n <= 9; n++) {
+            const sp = document.createElement("span");
+            sp.textContent = cell.notes.includes(n) ? n : "";
+            ng.appendChild(sp);
+          }
+          div.appendChild(ng);
+        }
+
+        div.addEventListener("click", () => {
+          selectedPos = { r, c };
+          playTone("tap");
+          renderAll();
+        });
+
+        div.addEventListener("dblclick", () => {
+          selectedPos = { r, c };
+          noteMode = !noteMode;
+          playTone("tap");
+          renderAll();
+        });
+      }
+      gridEl.appendChild(div);
+    }
+  }
+
+  // Renderiza stickers colados no tabuleiro
+  document.querySelectorAll(".pasted-sticker").forEach(el => el.remove());
+  const wrap = document.getElementById("boardWrap");
+  puzzle.pastedStickers.forEach((st, idx) => {
+    const sEl = document.createElement("div");
+    sEl.className = "pasted-sticker";
+    sEl.textContent = st.emo;
+    sEl.style.left = `${st.xPct}%`;
+    sEl.style.top = `${st.yPct}%`;
+    sEl.title = "Toque para remover sticker";
+    sEl.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      puzzle.pastedStickers.splice(idx, 1);
+      playTone("tap");
+      renderGrid();
+    });
+    wrap.appendChild(sEl);
+  });
+}
+
+function renderKeypad() {
+  const kp = document.getElementById("keypad");
+  kp.innerHTML = "";
+  for (let n = 1; n <= 9; n++) {
+    const b = document.createElement("button");
+    b.className = "key-btn";
+    b.textContent = n;
+    b.addEventListener("click", () => setDigit(n));
+    kp.appendChild(b);
+  }
+  const modeBtn = document.createElement("button");
+  modeBtn.className = `key-btn action-key ${noteMode ? "mode-on" : ""}`;
+  modeBtn.textContent = noteMode ? "✏️ Notas: ON" : "✏️ Notas";
+  modeBtn.addEventListener("click", () => {
+    noteMode = !noteMode;
+    playTone("tap");
+    renderKeypad();
+  });
+  kp.appendChild(modeBtn);
+}
+
+function renderTopAndPowers() {
+  document.body.dataset.theme = state.theme;
+  document.getElementById("themeSelect").value = state.theme;
+  document.getElementById("topName").textContent = state.profile.name;
+  document.getElementById("topSub").textContent = `Streak: ${state.streak} 🔥`;
+  document.getElementById("coinBadge").textContent = `🪙 ${state.coins}`;
+  document.getElementById("soundToggleBtn").textContent = state.sound ? "🔊" : "🔇";
+
+  const avBox = document.getElementById("topAvatar");
+  avBox.classList.toggle("gold-frame", !!state.unlocks.goldFrame);
+  if (state.profile.avatarType === "image" && state.profile.avatarVal) {
+    avBox.innerHTML = `<img src="${state.profile.avatarVal}" alt="Avatar" />`;
+  } else {
+    const found = AVATARS.find(a => a.id === state.profile.avatarVal) || AVATARS[0];
+    avBox.innerHTML = found.svg;
+  }
+
+  document.getElementById("hintCount").textContent = state.inventory.hints;
+  document.getElementById("notesCount").textContent = state.inventory.autoNotes;
+  document.getElementById("errCount").textContent = state.inventory.clearErr;
+}
+
+function renderAll() {
+  renderTopAndPowers();
+  renderGrid();
+  renderKeypad();
+  updateComboBanner();
+}
+
+// Power-ups
+document.getElementById("hintBtn").addEventListener("click", () => {
+  if (gameWon) return;
+  if (state.inventory.hints > 0) {
+    state.inventory.hints -= 1;
+  } else if (state.coins >= 15) {
+    state.coins -= 15;
+  } else {
+    triggerBurst("Moedas insuficientes! Resolva casos ou abra a Loja.");
+    return;
+  }
+
+  let targetCell = null;
+  if (selectedPos) {
+    const c = puzzle.grid[selectedPos.r][selectedPos.c];
+    if (c && c.type === "play" && c.val !== c.solution) targetCell = c;
+  }
+  if (!targetCell) {
+    for (let r = 0; r < puzzle.size && !targetCell; r++) {
+      for (let c = 0; c < puzzle.size; c++) {
+        const cell = puzzle.grid[r][c];
+        if (cell.type === "play" && cell.val !== cell.solution) {
+          targetCell = cell;
+          break;
+        }
+      }
+    }
+  }
+  if (targetCell) {
+    pushHistory();
+    targetCell.val = targetCell.solution;
+    targetCell.notes = [];
+    selectedPos = { r: targetCell.r, c: targetCell.c };
+  }
+  safeSave(state);
+  renderAll();
+});
+
+document.getElementById("autoNotesBtn").addEventListener("click", () => {
+  if (gameWon) return;
+  if (state.inventory.autoNotes > 0) {
+    state.inventory.autoNotes -= 1;
+  } else if (state.coins >= 20) {
+    state.coins -= 20;
+  } else {
+    triggerBurst("Moedas insuficientes para Auto-Notas!");
+    return;
+  }
+  pushHistory();
+  for (let r = 0; r < puzzle.size; r++) {
+    for (let c = 0; c < puzzle.size; c++) {
+      const cell = puzzle.grid[r][c];
+      if (cell.type === "play" && cell.val === 0) {
+        const runs = getCellRuns(r, c);
+        const combos = runs.map(run => getCombinations(run.target, run.cells.length).flat());
+        const valid = [1, 2, 3, 4, 5, 6, 7, 8, 9].filter(n => combos.every(list => list.includes(n)));
+        cell.notes = valid.length ? valid : [1, 2, 3, 4, 5, 6, 7, 8, 9];
+      }
+    }
+  }
+  safeSave(state);
+  renderAll();
+});
+
+document.getElementById("clearErrBtn").addEventListener("click", () => {
+  if (gameWon) return;
+  if (state.inventory.clearErr > 0) {
+    state.inventory.clearErr -= 1;
+  } else if (state.coins >= 10) {
+    state.coins -= 10;
+  } else {
+    triggerBurst("Moedas insuficientes para Limpar Erros!");
+    return;
+  }
+  const { errCells } = evaluateBoard();
+  pushHistory();
+  errCells.forEach(key => {
+    const [r, c] = key.split(",").map(Number);
+    puzzle.grid[r][c].val = 0;
+  });
+  safeSave(state);
+  renderAll();
+});
+
+document.getElementById("undoBtn").addEventListener("click", undoMove);
+document.getElementById("newPuzzleBtn").addEventListener("click", () => startPuzzle(currentMode));
+document.getElementById("soundToggleBtn").addEventListener("click", () => {
+  state.sound = !state.sound;
+  safeSave(state);
+  renderTopAndPowers();
+});
+
+document.querySelectorAll("#diffGroup button").forEach(btn => {
+  btn.addEventListener("click", () => startPuzzle(btn.dataset.diff));
+});
+
+document.getElementById("themeSelect").addEventListener("change", (e) => {
+  const chosen = e.target.value;
+  if (!state.unlockedThemes.includes(chosen)) {
+    triggerBurst("Desbloqueie este tema na Loja 🏪!");
+    e.target.value = state.theme;
+    return;
+  }
+  state.theme = chosen;
+  safeSave(state);
+  renderTopAndPowers();
+});
+
+// Stickers: toque ou arrastar para tabuleiro
+const drawer = document.getElementById("stickerDrawer");
+document.getElementById("toggleStickerDrawerBtn").addEventListener("click", () => {
+  drawer.classList.toggle("open");
+  renderStickerDrawer();
+});
+document.getElementById("closeStickerDrawerBtn").addEventListener("click", () => drawer.classList.remove("open"));
+
+function renderStickerDrawer() {
+  const list = document.getElementById("stickerList");
+  list.innerHTML = "";
+  STICKERS.forEach(st => {
+    const item = document.createElement("div");
+    item.className = "sticker-item";
+    item.innerHTML = `<span class="emo">${st.emo}</span><span class="lbl">${st.label}</span>`;
+
+    let dragging = false;
+    let ghost = null;
+
+    item.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      dragging = true;
+      ghost = document.createElement("div");
+      ghost.className = "flying-sticker";
+      ghost.textContent = st.emo;
+      ghost.style.left = `${e.clientX}px`;
+      ghost.style.top = `${e.clientY}px`;
+      document.body.appendChild(ghost);
+      item.setPointerCapture(e.pointerId);
+    });
+
+    item.addEventListener("pointermove", (e) => {
+      if (!dragging || !ghost) return;
+      ghost.style.left = `${e.clientX}px`;
+      ghost.style.top = `${e.clientY}px`;
+    });
+
+    item.addEventListener("pointerup", (e) => {
+      if (!dragging) return;
+      dragging = false;
+      if (ghost) ghost.remove();
+
+      const wrap = document.getElementById("boardWrap");
+      const rect = wrap.getBoundingClientRect();
+      const insideBoard = e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+
+      playTone("combo");
+      if (insideBoard) {
+        const xPct = Math.max(8, Math.min(92, ((e.clientX - rect.left) / rect.width) * 100));
+        const yPct = Math.max(8, Math.min(92, ((e.clientY - rect.top) / rect.height) * 100));
+        puzzle.pastedStickers.push({ emo: st.emo, xPct, yPct });
+        renderGrid();
+      } else {
+        triggerBurst(`${st.emo} ${st.label}`);
+      }
+    });
+
+    list.appendChild(item);
+  });
+}
+
+// Loja
+function openShop() {
+  document.getElementById("shopCoins").textContent = state.coins;
+  const grid = document.getElementById("shopGrid");
+  grid.innerHTML = "";
+
+  SHOP_ITEMS.forEach(it => {
+    const card = document.createElement("div");
+    card.className = "shop-item";
+    let owned = false;
+    if (it.kind === "theme") owned = state.unlockedThemes.includes(it.value);
+    if (it.kind === "unlock") owned = !!state.unlocks[it.key];
+
+    card.innerHTML = `
+      <div>
+        <div style="font-weight:800;font-size:14px;">${it.title}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px;">${it.desc}</div>
+      </div>
+      <button class="${owned ? "" : "primary"}" ${owned ? "disabled" : ""}>
+        ${owned ? "Adquirido ✓" : `Comprar (${it.cost} 🪙)`}
+      </button>
+    `;
+
+    const btn = card.querySelector("button");
+    btn.addEventListener("click", () => {
+      if (owned) return;
+      if (state.coins < it.cost) {
+        triggerBurst("Moedas insuficientes!");
+        return;
+      }
+      state.coins -= it.cost;
+      if (it.kind === "consumable") {
+        state.inventory[it.key] = (state.inventory[it.key] || 0) + 3;
+      } else if (it.kind === "theme") {
+        state.unlockedThemes.push(it.value);
+        state.theme = it.value;
+      } else if (it.kind === "unlock") {
+        state.unlocks[it.key] = true;
+      }
+      playTone("win");
+      safeSave(state);
+      renderAll();
+      openShop();
+    });
+
+    grid.appendChild(card);
+  });
+
+  document.getElementById("shopModal").classList.add("open");
+}
+
+document.getElementById("openShopBtn").addEventListener("click", openShop);
+document.getElementById("closeShopBtn").addEventListener("click", () => document.getElementById("shopModal").classList.remove("open"));
+
+// Perfil / Câmera / Galeria
+let tempAvatar = { type: state.profile.avatarType, val: state.profile.avatarVal };
+let camStream = null;
+let facingMode = "user";
+
+function stopCamera() {
+  if (camStream) {
+    camStream.getTracks().forEach(t => t.stop());
+    camStream = null;
+  }
+  document.getElementById("camVideo").style.display = "none";
+  document.getElementById("switchCamBtn").style.display = "none";
+  document.getElementById("capturePhotoBtn").style.display = "none";
+}
+
+function openProfileModal() {
+  tempAvatar = { type: state.profile.avatarType, val: state.profile.avatarVal };
+  document.getElementById("profileNameInput").value = state.profile.name;
+  renderAvatarChoices();
+  document.getElementById("profileModal").classList.add("open");
+}
+
+function renderAvatarChoices() {
+  const g = document.getElementById("avatarChoiceGrid");
+  g.innerHTML = "";
+  AVATARS.forEach(av => {
+    const locked = av.vip && !state.unlocks.vipAvatars;
+    const picked = tempAvatar.type === "svg" && tempAvatar.val === av.id;
+    const div = document.createElement("div");
+    div.className = `avatar-choice ${picked ? "picked" : ""} ${locked ? "locked" : ""}`;
+    div.innerHTML = `<div class="avatar-box">${av.svg}</div><span style="font-size:11px;font-weight:700;">${av.label}${locked ? " 🔒" : ""}</span>`;
+    div.addEventListener("click", () => {
+      if (locked) {
+        triggerBurst("Desbloqueie os Avatares VIP na Loja!");
+        return;
+      }
+      tempAvatar = { type: "svg", val: av.id };
+      renderAvatarChoices();
+    });
+    g.appendChild(div);
+  });
+}
+
+function compressImageToAvatar(imgSource) {
+  const canvas = document.getElementById("cropCanvas");
+  const ctx = canvas.getContext("2d");
+  const w = imgSource.videoWidth || imgSource.naturalWidth || 160;
+  const h = imgSource.videoHeight || imgSource.naturalHeight || 160;
+  const side = Math.min(w, h);
+  const sx = (w - side) / 2;
+  const sy = (h - side) / 2;
+  ctx.clearRect(0, 0, 160, 160);
+  ctx.drawImage(imgSource, sx, sy, side, side, 0, 0, 160, 160);
+  tempAvatar = { type: "image", val: canvas.toDataURL("image/jpeg", 0.72) };
+  renderAvatarChoices();
+}
+
+document.getElementById("galleryInput").addEventListener("change", (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => compressImageToAvatar(img);
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+async function startCam() {
+  stopCamera();
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode }, audio: false });
+    const video = document.getElementById("camVideo");
+    video.srcObject = camStream;
+    video.style.display = "block";
+    document.getElementById("switchCamBtn").style.display = "inline-flex";
+    document.getElementById("capturePhotoBtn").style.display = "inline-flex";
+  } catch (err) {
+    triggerBurst("Câmera indisponível neste dispositivo.");
+  }
+}
+
+document.getElementById("cameraStartBtn").addEventListener("click", startCam);
+document.getElementById("switchCamBtn").addEventListener("click", () => {
+  facingMode = facingMode === "user" ? "environment" : "user";
+  startCam();
+});
+document.getElementById("capturePhotoBtn").addEventListener("click", () => {
+  const video = document.getElementById("camVideo");
+  compressImageToAvatar(video);
+  stopCamera();
+  triggerBurst("Foto capturada!");
+});
+
+document.getElementById("saveProfileBtn").addEventListener("click", () => {
+  const nm = document.getElementById("profileNameInput").value.trim();
+  state.profile.name = nm || "Mestre Zen";
+  state.profile.avatarType = tempAvatar.type;
+  state.profile.avatarVal = tempAvatar.val;
+  state.onboarded = true;
+  stopCamera();
+  safeSave(state);
+  document.getElementById("profileModal").classList.remove("open");
+  renderTopAndPowers();
+});
+
+document.getElementById("closeProfileBtn").addEventListener("click", () => {
+  stopCamera();
+  if (!state.onboarded) {
+    state.onboarded = true;
+    safeSave(state);
+  }
+  document.getElementById("profileModal").classList.remove("open");
+});
+
+document.getElementById("openProfileBtn").addEventListener("click", openProfileModal);
+
+// Cronômetro
+setInterval(() => {
+  if (!gameWon && puzzle) {
+    elapsedSec += 1;
+    const m = String(Math.floor(elapsedSec / 60)).padStart(2, "0");
+    const s = String(elapsedSec % 60).padStart(2, "0");
+    document.getElementById("timerBadge").textContent = `⏱️ ${m}:${s}`;
+  }
+}, 1000);
+
+// Inicialização
+startPuzzle("facil");
+if (!state.onboarded) {
+  openProfileModal();
+}
+</script>
+</body>
+</html>
